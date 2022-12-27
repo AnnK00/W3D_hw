@@ -75,16 +75,16 @@ function init() {
 	scene = new THREE.Scene();
 	renderer = new THREE.WebGLRenderer();
 	renderer.setSize(window.innerWidth/2, window.innerHeight);
-	renderer.setClearColor(0x888888);
+	renderer.setClearColor(0xffffff);
 	document.body.appendChild(renderer.domElement);
 
 	camera = new THREE.OrthographicCamera(-110, 110, 90, -112, -100, 100);
 	camera.position.z = 50;
 
   ////////////////////////////////////////////////////////
-	var gridXZ = new THREE.GridHelper(200, 20, 'red', 'white');
-	gridXZ.rotation.x = Math.PI / 2;
-	scene.add(gridXZ);
+	<!-- var gridXZ = new THREE.GridHelper(200, 20, 'red', 'white'); -->
+	<!-- gridXZ.rotation.x = Math.PI / 2; -->
+	<!-- scene.add(gridXZ); -->
 
 	let geometry = new THREE.BufferGeometry();
 	let points = [];
