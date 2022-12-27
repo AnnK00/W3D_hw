@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<style>
+html, body {
+  width: 1000px;
+  height: 1000px;
+  margin: 0;
+  padding: 0;
+  font-family: Verdana, sans-serif;
+  background-color: #FAF0E6;
+}
+.grid-container {
+  display: grid;
+  grid-template-areas:
+    'v_vector vw_cal'
+    'w_vector vw_cal';
+  background-color: transparent;
+  row-gap: 15px;
+  column-gap: 30px;
+  padding: 40px;
+}
+.item1 {
+  grid-area: v_vector;
+  alignw-self: center;
+  justify-self: end;
+}
+.item2 {
+  grid-area: w_vector;
+  align-self: center;
+  justify-self: end;
+}
+.item3 {
+  grid-area: vw_cal;
+  align-self: center;
+  justify-self: start;
+}
+.block-1 {
+  border-radius: 30px;
+  border: 3px solid #b88747;
+  background-color: #fff7b3;
+  padding: 10px;
+  margin: 10px;
+  width: 250px;
+  height: 300px;
+}
+.block-2 {
+  border-radius: 30px;
+  border: 3px solid #4682b4;
+  background-color: #9dd0e1;
+  padding: 10px;
+  margin: 10px;
+  width: 250px;
+  height: 300px;
+}
+.block-3 {
+  border-radius: 30px;
+  border: 3px solid #808000;
+  background-color: #bfd9bf;
+  padding: 10px;
+  margin: 10px;
+  width: 324px;
+  height: 680px;
+}
+input{
+  padding: 12px;
+  display: inline-block;
+  border: 3px solid #778899;
+  border-radius: 4px;
+  box-sizing: border-box;
+  text-align: center;
+}
+ label { 
+  font-size:40px;
+}
+form {
+  text-align: center;
+}
+hr {
+  border: none;
+  height: 3px;
+  background: #778899;
+}
+</style>
+<body>
+<!--https://www.w3schools.com/css/tryit.asp?filename=trycss_forms
+https://www.geeksforgeeks.org/how-to-put-an-input-element-on-the-same-line-as-its-label/-->
+
+<h1 style="text-align: center; font-size: 80px; color: #773d22">Vector Caculator</h1>
+
+<div class="grid-container">
+<div class="block-1 item1">
+  <form>
+    <p style="font-size: 40px; line-height: 0px; text-align: left">v</p><hr>
+    
+    <label>x </label>
+    <input type="text" id="v_x" placeholder="x vector of v" onblur="cal();">
+    <br>
+    <label>y </label>
+    <input type="text" id="v_y" placeholder="y vector of v" onblur="cal();">
+    <br>
+    <label>z </label>
+    <input type="text" id="v_z" placeholder="z vector of v" onblur="cal();">
+  </form>
+</div>
+
+  <div class="block-2 item2">
+    <form>
+      <p style="font-size: 40px; line-height: 0px; text-align: left">w</p><hr>
+
+      <label>x </label>
+      <input type="text" id="w_x" placeholder="x vector of w" onblur="cal();">
+      <br>
+      <label>y </label>
+      <input type="text" id="w_y" placeholder="y vector of w" onblur="cal();">
+      <br>
+      <label>z </label>
+      <input type="text" id="w_z" placeholder="z vector of w" onblur="cal();">
+    </form>
+  </div>
+  
+  
+    <div class="block-3 item3">
+    <form>
+      <p style="font-size: 30px; line-height: 0px; text-align: left">inner product</p><hr>
+      <label>v &#8231; w </label>
+	  
+      <input type="text" id="v_w" placeholder="inner product of two vector" readonly>
+      <br><br><br><br><br><br><br><br><br><br><br><br>
+	  
+      <p style="font-size: 30px; line-height: 0px; display:inline;">v </p>
+      <p style="font-size: 20px; line-height: 0px; display:inline">&#10005;</p>
+      <p style="font-size: 30px; line-height: 80px; display:inline"> w(vector product)</p><hr>
+
+      <label>x </label><input id="result_x" placeholder="x vector of two vector" readonly><br>
+      <label>y </label><input id="result_y" placeholder="y vector of two vector" readonly><br>
+      <label>z </label><input id="result_z" placeholder="z vector of two vector" readonly>
+    </form>
+  </div>
+</div>
+
+
+<script src="https://threejs.org/build/three.min.js"></script>
+<script>
+function cal(){
+    var x1 = parseFloat(document.getElementById('v_x').value);
+    var x2 = parseFloat(document.getElementById('w_x').value);
+    var y1 = parseFloat(document.getElementById('v_y').value);
+    var y2 = parseFloat(document.getElementById('w_y').value);
+    var z1 = parseFloat(document.getElementById('v_z').value);
+    var z2 = parseFloat(document.getElementById('w_z').value);
+	const v = new THREE.Vector3(x1, y1, z1);
+	const w = new THREE.Vector3(x2, y2, z2);
+
+	const r1 = v.clone ();
+	var ans_a = r1.dot(w);
+	const r2 = v.clone ();
+	var ans_b = r2.cross(w);
+
+	document.getElementById('v_w').value = ans_a;
+	document.getElementById('result_x').value = ans_b.x;
+	document.getElementById('result_y').value = ans_b.y;
+	document.getElementById('result_z').value = ans_b.z;
+}
+</script>
+</body>
+</html>

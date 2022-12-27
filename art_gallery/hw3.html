@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script src="https://threejs.org/build/three.min.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+<script src="https://jyunming-chen.github.io/tutsplus/js/KeyboardState.js"></script>
+<!-- <script src="https://r105.threejsfundamentals.org/threejs/../3rdparty/dat.gui.min.js"></script> -->
+
+<style>
+body {
+  background-color: #FAF0E6;
+  font-family: Helvetica, Arial, 'Heiti TC', 'Microsoft JhengHei', sans-serif;
+  min-width: fit-content;
+  margin: 0 auto;
+}
+.grid-container {
+  display: grid;
+  grid-template-areas:
+    'floor_plan 3Dmodel'
+  background-color: transparent;
+}
+.item1 {
+  grid-area: floor_plan;
+}
+.item2 {
+  grid-area: 3Dmodel;
+}
+</style>
+
+<div class="grid-container">
+<div class="item1">
+<h3><a href="floor_plan.jpg" target="iframe_a" style="color: #0a9bf5" >Floor Plan</a></h3>
+<iframe name="iframe_a" height="360px" width="600px" ></iframe><br>
+<button onclick="viewpoint_1()" style="position: relative" >viewpoint_1</button>
+<button onclick="viewpoint_2()" style="position: relative" >viewpoint_2</button><br>
+<p>Please slide the scroll wheel after switching the viewpoint </p>
+</div>
+
+<div class="item2">
+<script>
+let renderer, scene, camera;
+let texture, mesh;
+let keyboard = new KeyboardState();
+let useMipmap = false;
+
+init_scene();
+init_building();
+init_decoration();
+init_lighting();
+animate();
+
+function init_scene() {
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 10000);
+  camera.position.x = 0;
+  camera.position.y = 50;
+  camera.position.z = 150;
+  renderer = new THREE.WebGLRenderer();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0xaaaaaa);
+
+  document.body.appendChild(renderer.domElement);
+  let controls = new THREE.OrbitControls(camera, renderer.domElement);
+  //controls.update();
+}
+
+function viewpoint_1() {
+  camera.position.x = 0;
+  camera.position.y = 1200;
+  camera.position.z = 0;
+}
+
+function viewpoint_2() {
+  camera.position.x = 200;
+  camera.position.y = 600;
+  camera.position.z = 200;
+}
+
+
+function init_building() {
+  let loader = new THREE.TextureLoader()
+  loader.crossOrigin = '';
+
+  texture_floor = loader.load("https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/71c382ff-ba87-45f5-bc5f-272d0b65f1fa/d6z6f7n-d0432750-413e-43dd-9c71-94851bd5de38.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiJcL2ZcLzcxYzM4MmZmLWJhODctNDVmNS1iYzVmLTI3MmQwYjY1ZjFmYVwvZDZ6NmY3bi1kMDQzMjc1MC00MTNlLTQzZGQtOWM3MS05NDg1MWJkNWRlMzguanBnIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.fV8ld2NWj0uazpqkpxHN0Fol4gL4QpObECjo-Vm6qPE");
+  texture_floor.rotation = 30;
+  texture_floor.wrapS = THREE.RepeatWrapping;
+  texture_floor.wrapT = THREE.RepeatWrapping;
+  texture_floor.repeat.set(8, 8);
+  
+  mesh_floor = new THREE.Mesh(new THREE.BoxGeometry(1220,20,800), 
+  new THREE.MeshBasicMaterial({map: texture_floor}))
+  mesh_floor.position.set(0,-10,0);
+  scene.add(mesh_floor);
+  
+
+  
+  texture_wall = loader.load("https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/5877e543-014c-4b8b-b6c2-37397c0c0c90/d59487q-2e729518-4c8c-4f29-a986-e4786331dde3.jpg/v1/fill/w_894,h_894,q_70,strp/seamless_stucco_white_plaster_wall_by_hhh316_d59487q-pre.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9OTAwIiwicGF0aCI6IlwvZlwvNTg3N2U1NDMtMDE0Yy00YjhiLWI2YzItMzczOTdjMGMwYzkwXC9kNTk0ODdxLTJlNzI5NTE4LTRjOGMtNGYyOS1hOTg2LWU0Nzg2MzMxZGRlMy5qcGciLCJ3aWR0aCI6Ijw9OTAwIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmltYWdlLm9wZXJhdGlvbnMiXX0.LYuDdo6UJ-xu2FsiY4aBABsOZOxNztocV0Xk_T1tY2s");
+  texture_wall.wrapS = THREE.RepeatWrapping;
+  texture_wall.wrapT = THREE.RepeatWrapping;
+  texture_wall.repeat.set(8, 8);
+  
+  leftwall = new THREE.Mesh(new THREE.BoxGeometry(20,300,800),
+  new THREE.MeshBasicMaterial({map: texture_wall}));
+  leftwall.position.set(-600,150,0);
+  scene.add( leftwall );
+
+  kickplate_l1 = new THREE.Mesh(new THREE.BoxGeometry(3,10,564),
+  new THREE.MeshBasicMaterial({color: 0X49280B}));
+  kickplate_l1.position.set(-588,5,-95);
+  scene.add( kickplate_l1 );
+  kickplate_l2 = new THREE.Mesh(new THREE.BoxGeometry(3,10,177),
+  new THREE.MeshBasicMaterial({color: 0X49280B}));
+  kickplate_l2.position.set(-588,5,291);
+  scene.add( kickplate_l2 );
+
+
+  rightwall = new THREE.Mesh(new THREE.BoxGeometry(20,300,800),
+  new THREE.MeshBasicMaterial({map: texture_wall}));
+  rightwall.position.set(600,150,0);
+  scene.add( rightwall );
+  kickplate_r = new THREE.Mesh(new THREE.BoxGeometry(3,10,760),
+  new THREE.MeshBasicMaterial({color: 0X49280B}));
+  kickplate_r.position.set(588,5,0);
+  scene.add( kickplate_r );
+
+  
+  backwall_1 = new THREE.Mesh(new THREE.BoxGeometry(200,300,20),
+  new THREE.MeshBasicMaterial({map: texture_wall}));
+  backwall_1.position.set(500,150,-390);
+  scene.add( backwall_1 );
+  kickplate_b1 = new THREE.Mesh(new THREE.BoxGeometry(188,10,3),
+  new THREE.MeshBasicMaterial({color: 0X49280B}));
+  kickplate_b1.position.set(493,5,-378);
+  scene.add( kickplate_b1 );
+  backwall_2 = new THREE.Mesh(new THREE.BoxGeometry(800,300,20),
+  new THREE.MeshBasicMaterial({map: texture_wall}));
+  backwall_2.position.set(-200,150,-390);
+  scene.add( backwall_2 );
+  kickplate_b2 = new THREE.Mesh(new THREE.BoxGeometry(789,10,3),
+  new THREE.MeshBasicMaterial({color: 0X49280B}));
+  kickplate_b2.position.set(-195,5,-378);
+  scene.add( kickplate_b2 );
+  backwall_3 = new THREE.Mesh(new THREE.BoxGeometry(200,50,20),
+  new THREE.MeshBasicMaterial({map: texture_wall}));
+  backwall_3.position.set(300,275,-390);
+  scene.add( backwall_3 );
+ 
+ 
+  frontwall_1 = new THREE.Mesh(new THREE.BoxGeometry(200,300,20),
+  new THREE.MeshBasicMaterial({map: texture_wall}));
+  frontwall_1.position.set(-500,150,390);
+  scene.add( frontwall_1 );
+  kickplate_f1 = new THREE.Mesh(new THREE.BoxGeometry(188,10,3),
+  new THREE.MeshBasicMaterial({color: 0X49280B}));
+  kickplate_f1.position.set(-494,5,378);
+  scene.add( kickplate_f1 );
+  frontwall_2 = new THREE.Mesh(new THREE.BoxGeometry(800,300,20),
+  new THREE.MeshBasicMaterial({map: texture_wall}));
+  frontwall_2.position.set(200,150,390);
+  scene.add( frontwall_2 );
+  kickplate_f2 = new THREE.Mesh(new THREE.BoxGeometry(186,10,3),
+  new THREE.MeshBasicMaterial({color: 0X49280B}));
+  kickplate_f2.position.set(-106,5,378);
+  scene.add( kickplate_f2 );
+  kickplate_f3 = new THREE.Mesh(new THREE.BoxGeometry(576,10,3),
+  new THREE.MeshBasicMaterial({color: 0X49280B}));
+  kickplate_f3.position.set(300,5,378);
+  scene.add( kickplate_f3 );
+  frontwall_3 = new THREE.Mesh(new THREE.BoxGeometry(200,50,20),
+  new THREE.MeshBasicMaterial({map: texture_wall}));
+  frontwall_3.position.set(-300,275,390);
+  scene.add( frontwall_3 );
+
+  
+/*ceiling = new THREE.Mesh(new THREE.BoxGeometry(1200,20,800),
+  new THREE.MeshBasicMaterial({map: texture_wall}));
+  ceiling.position.set(0,290,0);
+  scene.add( ceiling );*/
+ 
+ 
+  partitionwall_1 = new THREE.Mesh(new THREE.BoxGeometry(150,300,10),
+  new THREE.MeshBasicMaterial({map: texture_wall}));
+  partitionwall_1.position.set(-525,150,195);
+  scene.add( partitionwall_1 );
+  partitionwall_2 = new THREE.Mesh(new THREE.BoxGeometry(200,300,10),
+  new THREE.MeshBasicMaterial({map: texture_wall}));
+  partitionwall_2.position.set(-200,150,45);
+  scene.add( partitionwall_2 );
+  partitionwall_3 = new THREE.Mesh(new THREE.BoxGeometry(150,300,10),
+  new THREE.MeshBasicMaterial({map: texture_wall}));
+  partitionwall_3.position.set(275,150,-95);
+  scene.add( partitionwall_3 );
+  partitionwall_4 = new THREE.Mesh(new THREE.BoxGeometry(10,300,300),
+  new THREE.MeshBasicMaterial({map: texture_wall}));
+  partitionwall_4.position.set(-295,150,-100);
+  scene.add( partitionwall_4 );
+  kickplate_p4 = new THREE.Mesh(new THREE.BoxGeometry(139,10,3),
+  new THREE.MeshBasicMaterial({color: 0X49280B}));
+  kickplate_p4.position.set(-520,5,188);
+  scene.add( kickplate_p4 );
+  partitionwall_5 = new THREE.Mesh(new THREE.BoxGeometry(10,300,100),
+  new THREE.MeshBasicMaterial({map: texture_wall}));
+  partitionwall_5.position.set(-5,150,340);
+  scene.add( partitionwall_5 );
+  partitionwall_6 = new THREE.Mesh(new THREE.BoxGeometry(10,300,400),
+  new THREE.MeshBasicMaterial({map: texture_wall}));
+  partitionwall_6.position.set(195,150,0);
+  scene.add( partitionwall_6 );
+  
+  
+  
+  texture_door = loader.load("https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/333c539c-253d-4900-aab3-9e9bdd76327a/d4iwzs7-3038c1bf-f18c-472d-91cd-2549c922e337.jpg/v1/fill/w_900,h_1800,q_75,strp/wooden_door_texture_by_ancientorange_d4iwzs7-fullview.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MTgwMCIsInBhdGgiOiJcL2ZcLzMzM2M1MzljLTI1M2QtNDkwMC1hYWIzLTllOWJkZDc2MzI3YVwvZDRpd3pzNy0zMDM4YzFiZi1mMThjLTQ3MmQtOTFjZC0yNTQ5YzkyMmUzMzcuanBnIiwid2lkdGgiOiI8PTkwMCJ9XV0sImF1ZCI6WyJ1cm46c2VydmljZTppbWFnZS5vcGVyYXRpb25zIl19.EDHb7yzUBrr6Ywlg2z1sUzLnO__a8nFul8Cpl_Dvo_Q");
+  
+  door = new THREE.Mesh(new THREE.BoxGeometry(200,250,20),
+  new THREE.MeshBasicMaterial({map: texture_door}));
+  door.position.set(300,125,-390);
+  scene.add( door );
+}
+
+  
+
+function init_decoration() {
+  let loader = new THREE.TextureLoader()
+  loader.crossOrigin = '';
+  
+  texture_chair = loader.load("https://3.bp.blogspot.com/-R9rOQBzR0H8/UFGW4sxUW2I/AAAAAAAACG0/R8heQrDouNw/s1600/Seamless+cream+marble+cloud+texture.jpg");
+
+  chair_1 = new THREE.Mesh(new THREE.BoxGeometry(200,20,60),
+  new THREE.MeshBasicMaterial({map: texture_chair}));
+  chair_1.position.set(-486,60,-345);
+  scene.add( chair_1 );
+  leg_11 = new THREE.Mesh(new THREE.BoxGeometry(20,50,60),
+  new THREE.MeshBasicMaterial({map: texture_chair}));
+  leg_11.position.set(-576,25,-345);
+  scene.add( leg_11 );
+  leg_12 = new THREE.Mesh(new THREE.BoxGeometry(20,50,60),
+  new THREE.MeshBasicMaterial({map: texture_chair}));
+  leg_12.position.set(-396,25,-345);
+  scene.add( leg_12 );
+  chair_2 = new THREE.Mesh(new THREE.BoxGeometry(200,20,60),
+  new THREE.MeshBasicMaterial({map: texture_chair}));
+  chair_2.position.set(100,60,345);
+  scene.add( chair_2 );
+  leg_21 = new THREE.Mesh(new THREE.BoxGeometry(20,50,60),
+  new THREE.MeshBasicMaterial({map: texture_chair}));
+  leg_21.position.set(10,25,345);
+  scene.add( leg_21 );
+  leg_22 = new THREE.Mesh(new THREE.BoxGeometry(20,50,60),
+  new THREE.MeshBasicMaterial({map: texture_chair}));
+  leg_22.position.set(190,25,345);
+  scene.add( leg_22 );
+  chair_3 = new THREE.Mesh(new THREE.BoxGeometry(60,20,200),
+  new THREE.MeshBasicMaterial({map: texture_chair}));
+  chair_3.position.set(556,60,-276);
+  scene.add( chair_3 );
+  leg_31 = new THREE.Mesh(new THREE.BoxGeometry(60,50,20),
+  new THREE.MeshBasicMaterial({map: texture_chair}));
+  leg_31.position.set(556,25,-366);
+  scene.add( leg_31 );
+  leg_32 = new THREE.Mesh(new THREE.BoxGeometry(60,50,20),
+  new THREE.MeshBasicMaterial({map: texture_chair}));
+  leg_32.position.set(556,25,-186);
+  scene.add( leg_32 );
+
+
+  
+  texture_drawing1 = loader.load("");
+  texture_drawing2 = loader.load("");
+  texture_drawing3 = loader.load("");
+  texture_drawing4 = loader.load("");
+  texture_drawing5 = loader.load("");
+  texture_drawing6 = loader.load("");
+  texture_drawing7 = loader.load("");
+  texture_drawing8 = loader.load("");
+  texture_drawing9 = loader.load("");
+  texture_drawing10 = loader.load("");
+  texture_drawing11 = loader.load("");
+  texture_drawing12 = loader.load("");
+  texture_drawing13 = loader.load("");
+  
+  //MeshPhongMaterial
+  drawing_1 = new THREE.Mesh(new THREE.BoxGeometry(1,100,100),
+  new THREE.MeshLambertMaterial({map: texture_drawing1}));
+  drawing_1.position.set(-589,200,295);
+  scene.add(drawing_1);
+  <!-- let frameMap = loader.load ('https://i.imgur.com/Je86MDa.png'); -->
+  <!-- let frame = new THREE.Mesh (new THREE.PlaneGeometry (55,55), new THREE.MeshBasicMaterial({map:frameMap, transparent:true})); -->
+  <!-- frame.position.y = 40; -->
+  <!-- scene.add (frame); -->
+  drawing_2 = new THREE.Mesh(new THREE.BoxGeometry(1,100,100),
+  new THREE.MeshLambertMaterial({map: texture_drawing2}));
+  drawing_2.position.set(-589,200,10);
+  scene.add(drawing_2);
+  drawing_3 = new THREE.Mesh(new THREE.BoxGeometry(1,100,100),
+  new THREE.MeshLambertMaterial({map: texture_drawing3}));
+  drawing_3.position.set(-304,200,-130);
+  scene.add(drawing_3);
+  drawing_4 = new THREE.Mesh(new THREE.BoxGeometry(1,100,100),
+  new THREE.MeshLambertMaterial({map: texture_drawing4}));
+  drawing_4.position.set(-284,200,-40);
+  scene.add(drawing_4);
+  drawing_5 = new THREE.Mesh(new THREE.BoxGeometry(1,100,100),
+  new THREE.MeshLambertMaterial({map: texture_drawing5}));
+  drawing_5.position.set(-284,200,-165);
+  scene.add(drawing_5);
+  drawing_6 = new THREE.Mesh(new THREE.BoxGeometry(1,100,100),
+  new THREE.MeshLambertMaterial({map: texture_drawing6}));
+  drawing_6.position.set(189,200,100);
+  scene.add(drawing_6);
+  drawing_7 = new THREE.Mesh(new THREE.BoxGeometry(1,100,100),
+  new THREE.MeshLambertMaterial({map: texture_drawing7}));
+  drawing_7.position.set(201,200,50);
+  scene.add(drawing_7);
+  drawing_8 = new THREE.Mesh(new THREE.BoxGeometry(1,100,100),
+  new THREE.MeshLambertMaterial({map: texture_drawing8}));
+  drawing_8.position.set(589,200,10);
+  scene.add(drawing_8);
+  drawing_9 = new THREE.Mesh(new THREE.BoxGeometry(1,100,100),
+  new THREE.MeshLambertMaterial({map: texture_drawing9}));
+  drawing_9.position.set(589,200,200);
+  scene.add(drawing_9);
+  drawing_10 = new THREE.Mesh(new THREE.BoxGeometry(100,100,1),
+  new THREE.MeshLambertMaterial({map: texture_drawing10}));
+  drawing_10.position.set(-520,200,189);
+  scene.add(drawing_10);
+  drawing_11 = new THREE.Mesh(new THREE.BoxGeometry(100,100,1),
+  new THREE.MeshLambertMaterial({map: texture_drawing11}));
+  drawing_11.position.set(-180,200,39);
+  scene.add(drawing_11);
+  drawing_12 = new THREE.Mesh(new THREE.BoxGeometry(100,100,1),
+  new THREE.MeshLambertMaterial({map: texture_drawing12}));
+  drawing_12.position.set(275,200,-89);
+  scene.add(drawing_12);
+  drawing_13 = new THREE.Mesh(new THREE.BoxGeometry(100,100,1),
+  new THREE.MeshLambertMaterial({map: texture_drawing13}));
+  drawing_13.position.set(450,200,379);
+  scene.add(drawing_13);
+}  
+
+
+
+function init_lighting() {
+  let geometry_lamp = new THREE.CylinderGeometry( 4, 4, 8, 10 );
+  let material_lamp = new THREE.MeshPhongMaterial({color: "white"});
+  let group_lamp = new THREE.Group();
+  
+  let intensity = 1;
+  pointLight_1 = new THREE.PointLight(0xffffff, intensity);
+  pointLight_1.position.set(-389, 300, 295);
+  scene.add(pointLight_1);
+  sphereSize = 3;
+  //pointLightHelper_1 = new THREE.PointLightHelper(pointLight_1, sphereSize);
+  //scene.add(pointLightHelper_1);
+  spotLight_1 = new THREE.SpotLight(0xffffff, intensity, 250, Math.PI / 6, 0.974);
+  spotLight_1.position.set(-389, 300, 295);
+  spotLight_1.target = drawing_1;
+  spotLight_1.target.updateMatrixWorld();
+  scene.add(spotLight_1.target);
+  //spotLightHelper_1 = new THREE.SpotLightHelper(spotLight_1);
+  //scene.add(spotLightHelper_1);
+  //const gui = new dat.GUI();
+  //gui.add(spotLight_1, 'intensity', 0, 2, 0.01);
+  
+  
+  let lamp_1 = new THREE.Mesh( geometry_lamp, material_lamp );
+  lamp_1.rotation.z = Math.PI/1.5;
+  lamp_1.position.copy (spotLight_1.position);
+  group_lamp.add( lamp_1 );
+
+
+  
+
+  pointLight_2 = new THREE.PointLight(0xffffff, 1);
+  pointLight_2.position.set(-389, 300, 10);
+  scene.add(pointLight_2);
+  sphereSize = 3;
+  //pointLightHelper_2 = new THREE.PointLightHelper(pointLight_2, sphereSize);
+  //scene.add(pointLightHelper_2);
+  spotLight_2 = new THREE.SpotLight(0xffffff, 1, 250, Math.PI / 6, 0.974);
+  spotLight_2.position.set(-389, 300, 10);
+  spotLight_2.target = drawing_2;
+  spotLight_2.target.updateMatrixWorld();
+  scene.add(spotLight_2);
+  //spotLightHelper_2 = new THREE.SpotLightHelper(spotLight_2);
+  //scene.add(spotLightHelper_2);
+
+  let lamp_2 = new THREE.Mesh( geometry_lamp, material_lamp );
+  lamp_2.rotation.z = Math.PI/1.5;
+  lamp_2.position.copy (spotLight_2.position);
+  group_lamp.add( lamp_2 );
+
+  tracklighting_1 = new THREE.Mesh(new THREE.BoxGeometry(6,6,294),
+  new THREE.MeshBasicMaterial({color: "black"}));
+  tracklighting_1.position.set(-385, 303, 153);
+  scene.add( tracklighting_1 );
+
+
+  pointLight_3 = new THREE.PointLight(0xffffff, 1);
+  pointLight_3.position.set(-512,300,-130);
+  scene.add(pointLight_3);
+  sphereSize = 3;
+  //pointLightHelper_3 = new THREE.PointLightHelper(pointLight_3, sphereSize);
+  //scene.add(pointLightHelper_3);
+  spotLight_3 = new THREE.SpotLight(0xffffff, 1, 250, Math.PI / 6, 0.974);  
+  spotLight_3.position.set(-512,300,-130);
+  spotLight_3.target = drawing_3;
+  spotLight_3.target.updateMatrixWorld();
+  scene.add(spotLight_3);
+  //spotLightHelper_3 = new THREE.SpotLightHelper(spotLight_3);
+  //scene.add(spotLightHelper_3);
+
+  let lamp_3 = new THREE.Mesh( geometry_lamp, material_lamp ); 
+  lamp_3.rotation.z = Math.PI/3;
+  lamp_3.position.copy (spotLight_3.position);
+  group_lamp.add( lamp_3 );
+
+  pointLight_4 = new THREE.PointLight(0xffffff, 1);
+  pointLight_4.position.set(-48,300,-40);
+  scene.add(pointLight_4);
+  sphereSize = 3;
+  //pointLightHelper_4 = new THREE.PointLightHelper(pointLight_4, sphereSize);
+  //scene.add(pointLightHelper_4);
+  spotLight_4 = new THREE.SpotLight(0xffffff, 1, 250, Math.PI / 6, 0.974);  
+  spotLight_4.position.set(-48,300,-40);
+  spotLight_4.target = drawing_4;
+  spotLight_4.target.updateMatrixWorld();
+  scene.add(spotLight_4);
+  //spotLightHelper_4 = new THREE.SpotLightHelper(spotLight_4);
+  //scene.add(spotLightHelper_4);
+
+  let lamp_4 = new THREE.Mesh( geometry_lamp, material_lamp );
+  lamp_4.rotation.z = Math.PI/1.5;
+  lamp_4.position.copy (spotLight_4.position);
+  group_lamp.add( lamp_4 );
+
+  pointLight_5 = new THREE.PointLight(0xffffff, 1);
+  pointLight_5.position.set(-48,300,-163);
+  scene.add(pointLight_5);
+  sphereSize = 3;
+  //pointLightHelper_5 = new THREE.PointLightHelper(pointLight_5, sphereSize);
+  //scene.add(pointLightHelper_5);
+  spotLight_5 = new THREE.SpotLight(0xffffff, 1, 250, Math.PI / 6, 0.974);  
+  spotLight_5.position.set(-48,300,-163);
+  spotLight_5.target = drawing_5;
+  spotLight_5.target.updateMatrixWorld();
+  scene.add(spotLight_5);
+  //spotLightHelper_5 = new THREE.SpotLightHelper(spotLight_5);
+  //scene.add(spotLightHelper_5);
+
+  let lamp_5 = new THREE.Mesh( geometry_lamp, material_lamp );
+  lamp_5.rotation.z = Math.PI/1.5;
+  lamp_5.position.copy (spotLight_5.position);
+  group_lamp.add( lamp_5 );
+
+  pointLight_6 = new THREE.PointLight(0xffffff, 1);
+  pointLight_6.position.set(-48,300,100);
+  scene.add(pointLight_6);
+  sphereSize = 3;
+  //pointLightHelper_6 = new THREE.PointLightHelper(pointLight_6, sphereSize);
+  //scene.add(pointLightHelper_6);
+  spotLight_6 = new THREE.SpotLight(0xffffff, 1, 250, Math.PI / 6, 0.974);  
+  spotLight_6.position.set(-48,300,100);
+  spotLight_6.target = drawing_6;
+  spotLight_6.target.updateMatrixWorld();
+  scene.add(spotLight_6);
+  //spotLightHelper_6 = new THREE.SpotLightHelper(spotLight_6);
+  //scene.add(spotLightHelper_6);
+
+  let lamp_6 = new THREE.Mesh( geometry_lamp, material_lamp );
+  lamp_6.rotation.z = Math.PI/3;
+  lamp_6.position.copy (spotLight_6.position);
+  group_lamp.add( lamp_6 );
+
+  tracklighting_3 = new THREE.Mesh(new THREE.BoxGeometry(6,6,276),
+  new THREE.MeshBasicMaterial({color: "black"}));
+  tracklighting_3.position.set(-48, 303, -30);
+  scene.add( tracklighting_3 );
+
+
+  pointLight_7 = new THREE.PointLight(0xffffff, 1);
+  pointLight_7.position.set(395, 300, 50);
+  scene.add(pointLight_7);
+  sphereSize = 3;
+  //pointLightHelper_7 = new THREE.PointLightHelper(pointLight_7, sphereSize);
+  //scene.add(pointLightHelper_7);
+  spotLight_7 = new THREE.SpotLight(0xffffff, 1, 250, Math.PI / 6, 0.974);
+  spotLight_7.position.set(395, 300, 50);
+  spotLight_7.target = drawing_7;
+  spotLight_7.target.updateMatrixWorld();
+  scene.add(spotLight_7);
+  //spotLightHelper_7 = new THREE.SpotLightHelper(spotLight_7);
+  //scene.add(spotLightHelper_7);
+  
+  let lamp_7 = new THREE.Mesh( geometry_lamp, material_lamp );
+  lamp_7.rotation.z = Math.PI/1.5;
+  lamp_7.position.copy (spotLight_7.position);
+  group_lamp.add( lamp_7 );
+
+  pointLight_8 = new THREE.PointLight(0xffffff, 1);
+  pointLight_8.position.set(395, 300, 10);
+  scene.add(pointLight_8);
+  sphereSize = 3;
+  //pointLightHelper_8 = new THREE.PointLightHelper(pointLight_8, sphereSize);
+  //scene.add(pointLightHelper_8);
+  spotLight_8 = new THREE.SpotLight(0xffffff, 1, 250, Math.PI / 6, 0.974);
+  spotLight_8.position.set(395, 300, 10);
+  spotLight_8.target = drawing_8;
+  spotLight_8.target.updateMatrixWorld();
+  scene.add(spotLight_8);
+  //spotLightHelper_8 = new THREE.SpotLightHelper(spotLight_8);
+  //scene.add(spotLightHelper_8);
+  
+  let lamp_8 = new THREE.Mesh( geometry_lamp, material_lamp );
+  lamp_8.rotation.z = Math.PI/3;
+  lamp_8.position.copy (spotLight_8.position);
+  group_lamp.add( lamp_8 );
+  
+  pointLight_9 = new THREE.PointLight(0xffffff, 1);
+  pointLight_9.position.set(395, 300, 200);
+  scene.add(pointLight_9);
+  sphereSize = 3;
+  //pointLightHelper_9 = new THREE.PointLightHelper(pointLight_9, sphereSize);
+  //scene.add(pointLightHelper_9);
+  spotLight_9 = new THREE.SpotLight(0xffffff, 1, 250, Math.PI / 6, 0.974);
+  spotLight_9.position.set(395, 300, 200);
+  spotLight_9.target = drawing_9;
+  spotLight_9.target.updateMatrixWorld();
+  scene.add(spotLight_9);
+  //spotLightHelper_9 = new THREE.SpotLightHelper(spotLight_9);
+  //scene.add(spotLightHelper_9);
+
+  let lamp_9 = new THREE.Mesh( geometry_lamp, material_lamp );
+  lamp_9.rotation.z = Math.PI/3;
+  lamp_9.position.copy (spotLight_9.position);
+  group_lamp.add( lamp_9 );
+  
+  tracklighting_4 = new THREE.Mesh(new THREE.BoxGeometry(6,6,202),
+  new THREE.MeshBasicMaterial({color: "black"}));
+  tracklighting_4.position.set(395, 303, 105);
+  scene.add( tracklighting_4 );
+
+  
+  pointLight_10 = new THREE.PointLight(0xffffff, 1);
+  pointLight_10.position.set(-512, 300, -11);
+  scene.add(pointLight_10);
+  sphereSize = 3;
+  //pointLightHelper_10 = new THREE.PointLightHelper(pointLight_10, sphereSize);
+  //scene.add(pointLightHelper_10);
+  spotLight_10 = new THREE.SpotLight(0xffffff, 1, 250, Math.PI / 6, 0.974);
+  spotLight_10.position.set(-512, 300, -11);
+  spotLight_10.target = drawing_10;
+  spotLight_10.target.updateMatrixWorld();
+  scene.add(spotLight_10);
+  //spotLightHelper_10 = new THREE.SpotLightHelper(spotLight_10);
+  //scene.add(spotLightHelper_10);
+
+  let lamp_10 = new THREE.Mesh( geometry_lamp, material_lamp );
+  lamp_10.rotation.x = Math.PI/1.5;
+  lamp_10.position.copy (spotLight_10.position);
+  group_lamp.add( lamp_10 );
+
+  tracklighting_2 = new THREE.Mesh(new THREE.BoxGeometry(6,6,128),
+  new THREE.MeshBasicMaterial({color: "black"}));
+  tracklighting_2.position.set(-513, 303, -73);
+  scene.add( tracklighting_2 );
+  
+  
+  pointLight_11 = new THREE.PointLight(0xffffff, 1);
+  pointLight_11.position.set(-180, 300, -163);
+  scene.add(pointLight_11);
+  sphereSize = 3;
+  //pointLightHelper_11 = new THREE.PointLightHelper(pointLight_11, sphereSize);
+  //scene.add(pointLightHelper_11);
+  spotLight_11 = new THREE.SpotLight(0xffffff, 1, 250, Math.PI / 6, 0.974);
+  spotLight_11.position.set(-180, 300, -163);
+  spotLight_11.target = drawing_11;
+  spotLight_11.target.updateMatrixWorld();
+  scene.add(spotLight_11);
+  //spotLightHelper_11 = new THREE.SpotLightHelper(spotLight_11);
+  //scene.add(spotLightHelper_11);
+
+  let lamp_11 = new THREE.Mesh( geometry_lamp, material_lamp );
+  lamp_11.rotation.x = Math.PI/1.5;
+  lamp_11.position.copy (spotLight_11.position);
+  group_lamp.add( lamp_11 );
+    
+  tracklighting_5 = new THREE.Mesh(new THREE.BoxGeometry(136,6,6),
+  new THREE.MeshBasicMaterial({color: "black"}));
+  tracklighting_5.position.set(-116, 303, -165);
+  scene.add( tracklighting_5 );
+
+
+  pointLight_12 = new THREE.PointLight(0xffffff, 1);
+  pointLight_12.position.set(275, 300, 145);
+  scene.add(pointLight_12);
+  sphereSize = 3;
+  //pointLightHelper_12 = new THREE.PointLightHelper(pointLight_12, sphereSize);
+  //scene.add(pointLightHelper_12);
+  spotLight_12 = new THREE.SpotLight(0xffffff, 1, 250, Math.PI / 6, 0.974);
+  spotLight_12.position.set(275, 300, 145);
+  spotLight_12.target = drawing_12;
+  spotLight_12.target.updateMatrixWorld();
+  scene.add(spotLight_12);
+  //spotLightHelper_12 = new THREE.SpotLightHelper(spotLight_12);
+  //scene.add(spotLightHelper_12);  
+  
+  let lamp_12 = new THREE.Mesh( geometry_lamp, material_lamp );
+  lamp_12.rotation.x = Math.PI/3;
+  lamp_12.position.copy (spotLight_12.position);
+  group_lamp.add( lamp_12 );
+
+  pointLight_13 = new THREE.PointLight(0xffffff, 1);
+  pointLight_13.position.set(450, 300, 145);
+  scene.add(pointLight_13);
+  sphereSize = 3;
+  //pointLightHelper_13 = new THREE.PointLightHelper(pointLight_13, sphereSize);
+  //scene.add(pointLightHelper_13);
+  spotLight_13 = new THREE.SpotLight(0xffffff, 1, 250, Math.PI / 6, 0.974);
+  spotLight_13.position.set(450, 300, 145);
+  spotLight_13.target = drawing_13;
+  spotLight_13.target.updateMatrixWorld();
+  scene.add(spotLight_13);
+  //spotLightHelper_13 = new THREE.SpotLightHelper(spotLight_13);
+  //scene.add(spotLightHelper_13);
+
+  let lamp_13 = new THREE.Mesh( geometry_lamp, material_lamp );
+  lamp_13.rotation.x = Math.PI/1.5;
+  lamp_13.position.copy (spotLight_13.position);
+  group_lamp.add( lamp_13 );
+
+  tracklighting_6 = new THREE.Mesh(new THREE.BoxGeometry(187,6,6),
+  new THREE.MeshBasicMaterial({color: "black"}));
+  tracklighting_6.position.set(362, 303, 145);
+  scene.add( tracklighting_6 );
+
+  scene.add( group_lamp );
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  render();
+}
+
+function render() {
+  renderer.render(scene, camera);
+}
+</script>
+</div>
+</div>
+</body>
+</html>

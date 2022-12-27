@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script src="https://threejs.org/build/three.min.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+
+<style>
+#container {
+  width: 60vw;
+  height: 60vw;
+  float: left;
+  background-color: pink;
+  margin: 10px;
+}
+
+p {
+  margin: 10px;
+  text-align: justify;
+}
+</style>
+
+<h1 style="font-size:2em; text-align:center; margin:15px">Backyard layout</h1>
+<hr>
+
+<div id="container"></div>
+<div style="width:30vw;float:left;margin:10px;background-color:yellow">
+  <input type=radio class='gclass' id='placing' name='g' value='place' checked>Place
+  <input type=radio class='gclass' name='g' value='move'>Move
+  <input type=radio class='gclass' name='g' value='delete'>Delete<br>
+  <input type=radio id='table' name='i' value='table' checked>Table
+  <input type=radio id='chair' name='i' value='chair'>Chair<br>
+  <button id='save'>Save</button>
+  <button id='clear'>Clear</button>
+  <button id='restore'>Restore</button>
+  <p id='debugMsg'></p>
+</div>
+
+
+<script>
+
+var scene, renderer, camera;
+var plane, puck;
+var mouse = new THREE.Vector2();
+var raycaster = new THREE.Raycaster();
+var placing = true;
+var pucks = [];
+var thePuck;
+var controls; // move to global, for changing controls
+var funct, stuff = true;
+
+$('.gclass').click(function() {
+  if ($(this).val() === 'place')
+    placing = true;
+  else { // move and delete
+    placing = false;
+    if ($(this).val() === 'move') funct = true;
+    if ($(this).val() === 'delete') funct = false;
+  }
+
+});
+
+$('#table').click(function() {
+  stuff = true;
+});
+
+$('#chair').click(function() {
+  stuff = false;
+});
+
+$('#save').click( function() {
+
+  // pucks --> puckRecs
+  var recs = [];
+  for (let i = 0; i < pucks.length; i++) {
+    var rec = {};
+    rec.name = pucks[i].name;
+    rec.x = pucks[i].position.x.toFixed(2);
+    rec.z = pucks[i].position.z.toFixed(2);
+    recs.push(rec);
+  }
+
+  // puckRecs --> JSON.stringify --> localStorage
+  var recLog = JSON.stringify(recs);
+  localStorage.setItem('puckLog', recLog);
+
+});
+
+$('#clear').click( function() {
+
+  pucks.forEach( function(puck) {
+    puck.removeFromParent();
+  })
+
+  pucks = [];
+});
+
+$('#restore').click(function() {
+
+  // localStorage --> JSON.parse --> puckRecs
+	var parseLog = JSON.parse(localStorage.getItem('puckLog'));
+  for (let i = 0; i < parseLog.length; i++) {
+    var newPuck = puck.clone();
+    newPuck.position.set(parseLog[i].x, 0, parseLog[i].z);
+    scene.add(newPuck);
+    pucks.push (newPuck);
+  }
+  
+});
+
+
+init();
+animate();
+
+function init() {
+
+  renderer = new THREE.WebGLRenderer({
+    antialias: true
+  });
+  var ww = $('#container').innerWidth();
+  var hh = $('#container').innerHeight();
+  renderer.setSize(ww, hh);
+  renderer.setClearColor(0x555555);
+  $('#container').append(renderer.domElement);
+
+  scene = new THREE.Scene();
+
+  camera = new THREE.PerspectiveCamera(45, ww / hh, 1, 10000);
+  camera.position.set(0, 200, 500);
+  camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+  
+  var loader = new THREE.TextureLoader()
+  
+  if (stuff === true) { //table
+	var texture_surface = loader.load("https://previews.123rf.com/images/surachai1/surachai11811/surachai1181100082/116768014-white-grey-marble-texture-background-with-detailed-structure-high-resolution-bright-and-luxurious-ab.jpg");
+    var texture_holder = loader.load("https://m.media-amazon.com/images/I/81dTwUhHxxL.jpg");
+    texture_holder.wrapS = THREE.RepeatWrapping;
+    texture_holder.wrapT = THREE.RepeatWrapping;
+    texture_holder.repeat.set(4, 4);
+    var tableGroup = new THREE.Group();
+    var surface = new THREE.Mesh(new THREE.BoxGeometry(120,4,80), new THREE.MeshBasicMaterial({map: texture_surface}));
+    surface.position.y = 50;
+    var holder_mid = new THREE.Mesh(new THREE.BoxGeometry(110,22,80), new THREE.MeshBasicMaterial({map: texture_holder}));
+    holder_mid.position.y = 15;
+    var holder_right = new THREE.Mesh(new THREE.BoxGeometry(5,48,80), new THREE.MeshBasicMaterial({map: texture_holder}));
+    holder_right.position.set(57, 24, 0);
+    var holder_left = new THREE.Mesh(new THREE.BoxGeometry(5,48,80), new THREE.MeshBasicMaterial({map: texture_holder}));
+    holder_left.position.set(-57, 24, 0);
+    tableGroup.add (surface, holder_mid, holder_right, holder_left);
+    puck = tableGroup;
+  }
+  else { //chair
+	var texture_cushion = loader.load("https://previews.123rf.com/images/yamabikay/yamabikay1806/yamabikay180600012/102500264-usual-beige-leather-background-for-your-classic-style-seamless-square-texture-tile-ready-.jpg");
+    texture_cushion.wrapS = THREE.RepeatWrapping;
+    texture_cushion.wrapT = THREE.RepeatWrapping;
+    texture_cushion.repeat.set(2, 2);
+    var texture_leg = loader.load("https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/Basketweave-texture.svg/2048px-Basketweave-texture.svg.png");
+    texture_leg.wrapS = THREE.RepeatWrapping;
+    texture_leg.wrapT = THREE.RepeatWrapping;
+    texture_leg.repeat.set(4, 4);
+    var chairGroup = new THREE.Group();
+    var cushion = new THREE.Mesh(new THREE.BoxGeometry(40,8,40), new THREE.MeshBasicMaterial({map: texture_cushion}));
+    cushion.position.y = 52;
+    var leg = new THREE.Mesh(new THREE.BoxGeometry(40,48,40), new THREE.MeshBasicMaterial({map: texture_leg}));
+    leg.position.y = 24;
+    chairGroup.add (cushion, leg);
+    puck = chairGroup;
+  }
+  
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+  //var gridXZ = new THREE.GridHelper(400, 20, 'red', 'white');
+  //scene.add(gridXZ);
+  
+  var floorGroup = new THREE.Group();
+  var grassMap = loader.load ('https://media.istockphoto.com/id/666286590/photo/artificial-grass.jpg?b=1&s=612x612&w=0&k=20&c=2K6z_LqJB0D8wZn-32wnOAiVoW5lgGa5d1tFWkd3jxw=');
+  var grassAlpha = loader.load ('https://i.imgur.com/yhMD4yh.png');
+  var grassFloor = new THREE.Mesh (new THREE.PlaneGeometry (400,400), new THREE.MeshBasicMaterial({map: grassMap, transparent:true, alphaMap: grassAlpha}));
+
+  var stoneMap = loader.load ('https://3.bp.blogspot.com/-2e5tpffx1Kw/WYSsbYHzbWI/AAAAAAAADQI/hJzjQtTDbo4bXPrChvYB-RNTKQlJdVY3wCLcBGAs/s1600/stonepav03.jpg');
+  var stoneAlpha = loader.load ('https://i.imgur.com/lrX12Xa.png');
+  var stoneFloor = new THREE.Mesh (new THREE.PlaneGeometry (400,400), new THREE.MeshBasicMaterial({map: stoneMap, transparent:true, alphaMap: stoneAlpha}));
+  floorGroup.add (grassFloor, stoneFloor);
+  scene.add (floorGroup);
+  floorGroup.rotation.x = -Math.PI/2;
+  
+  // build an invisible plane, overlapping the grid
+  plane = new THREE.Mesh(
+    new THREE.PlaneGeometry(400, 400, 8, 8),
+    new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      opacity: 0,
+      transparent: true
+    }));
+  plane.rotation.x = -Math.PI / 2;
+  plane.material.visible = true; // invisible, for picking only
+  scene.add(plane);
+
+  window.addEventListener('resize', onWindowResize, false);
+  $('#container').on("pointerdown", onMouseDown);
+  $('#container').on("pointermove", onMouseMove);
+  $('#container').on("pointerup", onMouseUp);
+
+  thePuck = null;
+}
+
+function onWindowResize() {
+  var ww = $('#container').innerWidth();
+  var hh = $('#container').innerHeight();
+  camera.aspect = ww / hh;
+  camera.updateProjectionMatrix();
+  renderer.setSize(ww, hh);
+}
+
+function onMouseDown(event) {
+
+  var viewportPos = $('#container').get(0).getBoundingClientRect();
+  mouse.x = ((event.clientX - viewportPos.left) / $('#container').innerWidth()) * 2 - 1;
+  mouse.y = -((event.clientY - viewportPos.top) / $('#container').innerHeight()) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+
+  if (placing === true) { // place
+    var intersects = raycaster.intersectObject(plane);
+    if (intersects.length > 0) {
+      var newPuck = puck.clone(); //makePuck();
+      newPuck.position.copy(intersects[0].point);
+	  //newPuck.name = 'puck' + puckId++;
+	  scene.add(newPuck);
+      pucks.push(newPuck);
+    }
+  } else {
+    if (funct === true) { // move
+      var intersects = raycaster.intersectObjects(pucks);
+      if (intersects.length > 0) {
+        thePuck = intersects[0].object;
+      }
+    } else { //delete
+      var intersects = raycaster.intersectObjects(pucks);
+      if (intersects.length > 0) {
+        thePuck = intersects[0].object;
+
+        //scene.remove(thePuck);
+        thePuck.removeFromParent();
+
+        // remove thePuck from pucks
+        for (let i = 0; i < pucks.length; i++) {
+          if (pucks[i] === thePuck) {
+            pucks.splice(i, 1);
+            break;
+          }
+        }
+      }
+    }
+  }
+}
+
+
+function onMouseUp(event) {
+  thePuck = null;
+  controls.enabled = true;
+}
+
+
+function onMouseMove(event) {
+  event.preventDefault();
+  if (thePuck === null) return;
+
+  var viewportPos = $('#container').get(0).getBoundingClientRect();
+  mouse.x = ((event.clientX - viewportPos.left) / $('#container').innerWidth()) * 2 - 1;
+  mouse.y = -((event.clientY - viewportPos.top) / $('#container').innerHeight()) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  var intersects = raycaster.intersectObject(plane);
+  if (intersects.length > 0) {
+    controls.enabled = false; // to disable camera movement
+    thePuck.position.copy(intersects[0].point);
+  }
+
+}
+
+
+
+function animate() {
+
+  requestAnimationFrame(animate);
+  render();
+
+  $('#debugMsg').text(pucks.length + ' stuff on plane');
+
+}
+
+function render() {
+  renderer.render(scene, camera);
+}
+</script>
+</body>
+</html>

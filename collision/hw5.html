@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<body>
+<script src="https://threejs.org/build/three.min.js"></script>
+<style>
+#info {
+  position: absolute;
+  top: 0px;
+  width: 100%;
+  padding: 10px;
+  text-align: center;
+  color: #ffff00
+}
+
+body {
+  overflow: hidden;
+}
+
+.slidecontainer {
+  width: 100%;
+}
+
+.slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 25px;
+  background: #d3d3d3;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+}
+
+.slider:hover {
+  opacity: 1;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 25px;
+  height: 25px;
+  background: #04AA6D;
+  cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+  width: 25px;
+  height: 25px;
+  background: #04AA6D;
+  cursor: pointer;
+}
+</style>
+
+
+<h1 style="font-size:2em; text-align:center; margin:15px">Homewoek5_node.js</h1>
+<hr>
+
+<div class="slidecontainer" style="display:flex;flex-direction:row;justify-content:center;align-items:center;
+									width:40vw;float:right;margin:10px">
+  <label style="font-size:24px">Radius:</label>
+  <input type="range" min="1" max="100" value="50" id="myRange">
+  <p>Value: <span id="demo"></span></p>
+</div>
+
+
+
+<script>
+var camera, scene, renderer;
+var circle, pos, vel;
+
+init();
+animate();
+
+function init() {
+	scene = new THREE.Scene();
+	renderer = new THREE.WebGLRenderer();
+	renderer.setSize(window.innerWidth/2, window.innerHeight);
+	renderer.setClearColor(0x888888);
+	document.body.appendChild(renderer.domElement);
+
+	camera = new THREE.OrthographicCamera(-110, 110, 90, -112, -100, 100);
+	camera.position.z = 50;
+
+  ////////////////////////////////////////////////////////
+	var gridXZ = new THREE.GridHelper(200, 20, 'red', 'white');
+	gridXZ.rotation.x = Math.PI / 2;
+	scene.add(gridXZ);
+
+	let geometry = new THREE.BufferGeometry();
+	let points = [];
+	points.push(new THREE.Vector3(-80, -80, 0),
+				new THREE.Vector3(80, -80, 0),
+				new THREE.Vector3(80, 80, 0),
+				new THREE.Vector3(-80, 80, 0),
+				new THREE.Vector3(-80, -80, 0));
+	geometry.setFromPoints(points);
+	var border = new THREE.Line(geometry, new THREE.LineBasicMaterial({color: 'blue'}));
+	scene.add(border);
+
+
+	var slider = document.getElementById("myRange");
+	var output = document.getElementById("demo");
+	output.innerHTML = slider.value;
+
+	slider.oninput = function() {
+	  output.innerHTML = this.value;
+	}
+	circle = new THREE.Mesh(new THREE.CircleGeometry(10, 20, 20), new THREE.MeshBasicMaterial({color: 'yellow'}));
+	scene.add(circle);
+	
+	
+	
+	rectangle = new THREE.Mesh(new THREE.PlaneGeometry( 40, 20 ), new THREE.MeshBasicMaterial( {color: 0xffff00, side: THREE.DoubleSide} ));
+	rectangle.position.set(0, 0, 0);
+	scene.add(rectangle);
+
+	pos = new THREE.Vector3();
+	vel = new THREE.Vector3(10, 20);
+}
+
+function animate() {
+	var dt = 0.05;
+	requestAnimationFrame(animate);
+	renderer.render(scene, camera);
+
+	pos.add(vel.clone().multiplyScalar(dt));
+	if (pos.x > 70 || pos.x < -70) vel.x *= -1;
+	if (pos.y > 70 || pos.y < -70) vel.y *= -1;
+
+	if (pos.x > 0) circle.material.color.set('cyan');
+	else circle.material.color.set('yellow');
+	circle.position.copy(pos);
+}
+</script>
+</body>
